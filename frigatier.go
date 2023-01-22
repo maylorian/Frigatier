@@ -3,6 +3,7 @@ package Frigatier
 import (
 	"errors"
 	"fmt"
+	"github.com/andreasavg/Frigatier/utils"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"gopkg.in/yaml.v3"
 	"log"
@@ -10,9 +11,10 @@ import (
 )
 
 type Frigatier struct {
-	config    *Config
-	client    mqtt.Client
-	eventsMap map[string]bool
+	config            *Config
+	client            mqtt.Client
+	eventsMap         map[string]bool
+	enabledMessengers []Messenger
 }
 
 func NewFrigatier() *Frigatier {
@@ -23,9 +25,10 @@ func (f *Frigatier) Run() {
 	f.sanityChecks()
 	f.parseConfig()
 	f.checkConfig()
-	f.createMaps()
+	f.createMapsAndSlices()
 	f.createClient()
 	f.subscribeToTopics()
+	f.createMessengers()
 	f.runForever()
 }
 
@@ -38,9 +41,7 @@ func (f *Frigatier) sanityChecks() {
 
 func (f *Frigatier) parseConfig() {
 	b, err := os.ReadFile("config.yml")
-	if err != nil {
-		log.Fatalf("Error during reading config file: %s", err.Error())
-	}
+	utils.DieIfErr(err, "Error during reading config file: %s")
 	c := NewConfig()
 	if err := yaml.Unmarshal(b, c); err != nil {
 		log.Fatalf("Error persing config file: %s", err.Error())
@@ -63,8 +64,9 @@ func (f *Frigatier) checkConfig() {
 	}
 }
 
-func (f *Frigatier) createMaps() {
+func (f *Frigatier) createMapsAndSlices() {
 	f.eventsMap = make(map[string]bool)
+	f.enabledMessengers = make([]Messenger, 0)
 }
 
 func (f *Frigatier) createClient() {
@@ -80,7 +82,7 @@ func (f *Frigatier) createClient() {
 	}
 	c := mqtt.NewClient(opts)
 	if token := c.Connect(); token.Wait() && token.Error() != nil {
-		panic(token.Error())
+		log.Fatalf(token.Error().Error())
 	}
 	f.client = c
 }
@@ -94,6 +96,14 @@ func (f *Frigatier) subscribeToTopics() {
 	eventsTopic := fmt.Sprintf("%s/events", topicPrefix)
 	if token := f.client.Subscribe(eventsTopic, 0, nil); token.Wait() && token.Error() != nil {
 		log.Fatalf(token.Error().Error())
+	}
+}
+
+func (f *Frigatier) createMessengers() {
+	messengers := f.config.Messengers
+	if messengers.Slack.Enabled {
+		slack := NewSlackClient(messengers.Slack)
+		f.enabledMessengers = append(f.enabledMessengers, slack)
 	}
 }
 

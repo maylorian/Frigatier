@@ -2,17 +2,16 @@ package Frigatier
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/andreasavg/Frigatier/utils"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"log"
 	"os"
 )
 
 func (f *Frigatier) EventHandler(client mqtt.Client, msg mqtt.Message) {
 	det := &Detection{}
 	err := json.Unmarshal(msg.Payload(), det)
-	if err != nil {
-		log.Fatalf("Error reading detection from MQTT: %s", err)
-	}
+	utils.WarnIfErr(err, "Error reading detection from MQTT")
 	if det.BeforeDetection.FalsePositive {
 		return
 	}
@@ -36,16 +35,15 @@ func (f *Frigatier) processAlreadySeenEvent(det *Detection) {
 }
 
 func (f *Frigatier) processNewEvent(msg *Detection) {
-	slackEnabled := f.config.Messengers.Slack.Enabled
-	if slackEnabled {
-		slack := NewSlackClient(f.config.Messengers.Slack)
-		f.notify(slack, msg)
+	image := f.getEventImage(msg.BeforeDetection.Id)
+	for _, messenger := range f.enabledMessengers {
+		err := messenger.Notify(msg, image)
+		utils.WarnIfErr(err, "Failure to send message through slack.")
 	}
+	f.handlePostMessageActions(image)
 }
 
 func (f *Frigatier) handlePostMessageActions(image string) {
 	err := os.Remove(image)
-	if err != nil {
-		log.Fatalf("Failed to remove file: %s. Please delete manually.", image)
-	}
+	utils.WarnIfErr(err, fmt.Sprintf("Failed to remove file: %s. Please delete manually.", image))
 }
