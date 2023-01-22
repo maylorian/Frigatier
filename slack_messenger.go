@@ -1,25 +1,37 @@
-package main
+package Frigatier
 
 import (
 	"fmt"
 	"github.com/slack-go/slack"
-	"log"
 )
 
-type SlackMessenger struct {
-	Enabled bool   `yaml:"enabled"`
-	Token   string `yaml:"token"`
-	Channel string `yaml:"channel"`
+type SlackConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	SendSnapshot bool   `yaml:"send_snapshot"`
+	Token        string `yaml:"token"`
+	Channel      string `yaml:"channel"`
 }
 
-func NewSlackClient(s SlackMessenger) *slack.Client {
+type Slack struct {
+	client *slack.Client
+}
+
+func NewSlackClient(s SlackConfig) *slack.Client {
 	return slack.New(s.Token)
 }
 
-func (f *Frigatier) notifySlack(s *slack.Client, msg *Detection) {
+func (f *Frigatier) notify(s *slack.Client, msg *Detection) error {
 	message := fmt.Sprintf("A %s was detected by %s", msg.BeforeDetection.Label, msg.BeforeDetection.Camera)
-	_, _, err := s.PostMessage(f.config.Messengers.Slack.Channel, slack.MsgOptionText(message, false))
-	if err != nil {
-		log.Println("Failed to send message to slack.")
+	image := f.getEventImage(msg.BeforeDetection.Id)
+	params := slack.FileUploadParameters{
+		Channels:       []string{f.config.Messengers.Slack.Channel},
+		InitialComment: message,
+		File:           image,
 	}
+	_, err := s.UploadFile(params)
+	if err != nil {
+		return err
+	}
+	f.handlePostMessageActions(image)
+	return nil
 }

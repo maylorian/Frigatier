@@ -1,9 +1,10 @@
-package main
+package Frigatier
 
 import (
 	"encoding/json"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"log"
+	"os"
 )
 
 func (f *Frigatier) EventHandler(client mqtt.Client, msg mqtt.Message) {
@@ -38,6 +39,13 @@ func (f *Frigatier) processNewEvent(msg *Detection) {
 	slackEnabled := f.config.Messengers.Slack.Enabled
 	if slackEnabled {
 		slack := NewSlackClient(f.config.Messengers.Slack)
-		f.notifySlack(slack, msg)
+		f.notify(slack, msg)
+	}
+}
+
+func (f *Frigatier) handlePostMessageActions(image string) {
+	err := os.Remove(image)
+	if err != nil {
+		log.Fatalf("Failed to remove file: %s. Please delete manually.", image)
 	}
 }

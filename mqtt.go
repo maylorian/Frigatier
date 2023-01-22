@@ -1,4 +1,4 @@
-package main
+package Frigatier
 
 type TimedDetection struct {
 	Id              string    `json:"id"`
