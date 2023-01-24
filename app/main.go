@@ -1,6 +1,8 @@
 package main
 
-import "github.com/andreasavg/Frigatier"
+import (
+	"github.com/andreasavg/Frigatier"
+)
 
 func main() {
 	app := Frigatier.NewFrigatier()

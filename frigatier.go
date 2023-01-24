@@ -100,10 +100,14 @@ func (f *Frigatier) subscribeToTopics() {
 }
 
 func (f *Frigatier) createMessengers() {
-	messengers := f.config.Messengers
-	if messengers.Slack.Enabled {
-		slack := NewSlackClient(messengers.Slack)
+	m := f.config.Messengers
+	if m.Slack.Enabled {
+		slack := NewSlackClient(m.Slack)
 		f.enabledMessengers = append(f.enabledMessengers, slack)
+	}
+	if m.Discord.Enabled {
+		discord := NewDiscordMessenger(m.Discord)
+		f.enabledMessengers = append(f.enabledMessengers, discord)
 	}
 }
 

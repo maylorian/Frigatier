@@ -19,7 +19,8 @@ type Mqtt struct {
 }
 
 type NotificationMessengers struct {
-	Slack SlackConfig `yaml:"slack"`
+	Slack   SlackConfig   `yaml:"slack"`
+	Discord DiscordConfig `yaml:"discord"`
 }
 
 func NewConfig() *Config {
