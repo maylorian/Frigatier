@@ -31,3 +31,5 @@ messengers:
     channel: <channel or user id>
 
 ```
+
+This is a very VERY early release. Your cat might be consumed by black holes.
